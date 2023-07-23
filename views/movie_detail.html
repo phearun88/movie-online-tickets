@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movies</title>
+    <link rel="stylesheet" type="text/css" href="/css/style.css" />
+</head>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.3/jquery.min.js"></script>
+<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
+<script>
+
+    var payment = false;
+    $(document).ready(function () {
+
+        var getMyTicket = $.cookie("cookieTicket");
+        var getFirstNm = $.cookie("firstNm");
+        var getLastNm = $.cookie("lastNm");
+        var getRoleId = $.cookie("role_id");
+        if (getMyTicket == "" || getMyTicket == undefined) {
+            $(".numCart").text("0");
+        } else {
+            $(".numCart").text("1");
+        }
+
+        var htmlLogin = "";
+        // $("#checkLogIn").remove();
+        var newURL ="";
+        if (getFirstNm != undefined && getLastNm != undefined && getRoleId != undefined) {
+            htmlLogin = '<a style="color: white;">' + getFirstNm + " " + getLastNm + '</a>' +'<button class="logoutBtn" onclick="handleLogout()">Logout</button>';
+            $("#checkLogIn").append(htmlLogin);
+            newURL = "/history/ticket/";
+
+        } else {
+            newURL = "/login";
+            htmlLogin = '<a href="/login" style="color: white;">Login</a>';
+            $("#checkLogIn").append(htmlLogin);
+        }
+        $("#linkCart").attr("href", newURL);
+        loadCategoryData()
+        var currentDate = new Date()
+
+
+        var html = "";
+        var k = 1;
+        for (let i = 0; i < 3; i++) {
+            var day = currentDate.getDate() + i
+            var month = currentDate.getMonth()
+            var year = currentDate.getFullYear()
+            var myDate = day + "-" + month + "-" + year;
+            // 
+            html += '<Button type="button" onclick="selectDate(this)" data-t1="btn' + k + '" class="d' + k + ' btnDate btnDis"><span>' + myDate + '</span></Button> &nbsp'
+            k++;
+        }
+        $("#conBtnDate").append(html);
+
+        getDataMovie()
+
+
+
+
+        $("#btnPayment").click(function () {
+            console.log(payment)
+            if (payment == true) {
+                console.log('d')
+                var getEmail = $.cookie("email");
+                console.log(getEmail)
+                if (getEmail == undefined) {
+                    window.location.href = "http://localhost/login";
+                } else {
+                    var remark = $("#remark").val().trim();
+                    if (remark != "") {
+                        var getMyTicket = $.cookie("cookieTicket");
+                        var getUserId = $.cookie("userID");
+                        var ticketInfor = JSON.parse(getMyTicket);
+                        var showtime = ticketInfor.getDate + ticketInfor.getTime;
+                        var discount = ticketInfor.discount;
+                        var price = ticketInfor.price;
+                        var user_id = getUserId;
+                        var movie_id = ticketInfor.movie_id;
+                        var theater = ticketInfor.theater;
+                        var seatno = ticketInfor.seatno;
+                        var totalprice = ticketInfor.total_price
+
+                        
+                        console.log(user_id);
+
+                        $.ajax('/api/ticket/add', {
+                            "type": "POST",
+                            "data": {
+                                'showtime': showtime,
+                                'discount': discount,
+                                'price': price,
+                                'user_id': user_id,
+                                'movie_id': movie_id,
+                                'seatno': seatno,
+                                'remark': remark,
+                                'totalprice': totalprice
+                            }
+                        }).done(function (data) {
+                            console.log(data)
+
+                            if(data == "success"){
+                                
+                                window.location.href = "http://localhost:/history/ticket/";
+                            }
+
+                            hideTicketInfor();
+                            $(".numCart").text("0");
+
+                        }).fail(function () {
+                            console.log("fail");
+                        })
+                    }else{
+                        alert("Please Enter Bank Account")
+                        return false;
+                    }
+                }
+            } else {
+                alert("Please Save tickets")
+                return false;
+            }
+
+        })
+
+    });
+    function hideTicketInfor() {
+        // $("#removeTicket").remove()
+        // var html = "<h2>Congratulations enjoy your movie times</h2>"
+        // $("#dataTicket").append(html);
+       
+    }
+
+    function handleLogout(){
+        $.ajax("/api/logout", {
+            "type":"GET",
+        }).done(res=>{
+            location.reload();
+        })
+    }
+
+    function getDataMovie() {
+
+        var urlUpdate = window.location.pathname;
+        var movie_id = urlUpdate.replace("/movie/", "");
+
+        $.ajax('/api/movie/' + movie_id, {
+            "type": "get"
+
+        }).done(function (data) {
+
+            console.log(data.rows[0])
+            var movie_cover = data.rows[0].movie_cover;
+            var movie_desc = data.rows[0].movie_desc;
+            var movie_link = data.rows[0].movie_link;
+            var movie_name = data.rows[0].movie_name;
+            var movie_release_date = data.rows[0].movie_release_date;
+            var movie_view = data.rows[0].movie_view;
+            var price_id = data.rows[0].price_id;
+            var theater = data.rows[0].theater;
+            var cate_name = data.rows[0].cate_name;
+            var price = data.rows[0].price_id;
+            var discount = "5";
+
+            var coverImg = '<img src="/Images/' + movie_cover + '" width="200px" style="border-radius: 15%; border: 2px solid white; margin-left: 10px;">'
+            var videoLink = ' <iframe width="100%" height="385" src="https://www.youtube.com/embed/' + movie_link + '" frameborder="0" allowfullscreen></iframe>'
+            $("#coverMovie").append(coverImg);
+            $("#movie_links").append(videoLink);
+
+            $(".theater").text(theater);
+            $(".movie_release_date").text(movie_release_date);
+            $(".movie_name").text(movie_name);
+            $(".cate_name").text(cate_name);
+            $(".movie_view").text(movie_view);
+            $(".movie_desc").text(movie_desc);
+            $(".price").text(price);
+            $(".discount").text(discount);
+
+            $(".priceHid").val(price);
+            $(".movie_idHid").val(data.rows[0].movie_id);
+
+        }).fail(function () {
+            console.log("fail");
+        })
+    }
+
+    var getTime = "";
+    function selectTime(btn) {
+
+        $(btn).addClass("btnTimeAct");
+        $(btn).removeClass("btnTime");
+
+        var thisBtn = $(btn).attr("data-t1");
+        getTime = $(btn).text();
+        console.log(getTime);
+
+        if (thisBtn == "btn1") {
+            $(".btn2 , .btn3 , .btn4 , .btn5 , .btn6").addClass("btnTime");
+        } else if (thisBtn == "btn2") {
+            $(".btn1 , .btn3 , .btn4 , .btn5 , .btn6").addClass("btnTime");
+        } else if (thisBtn == "btn3") {
+            $(".btn1 , .btn2 , .btn4 , .btn5 , .btn6").addClass("btnTime");
+        } else if (thisBtn == "btn4") {
+            $(".btn1 , .btn3 , .btn2 , .btn5 , .btn6").addClass("btnTime");
+        } else if (thisBtn == "btn5") {
+            $(".btn1 , .btn3 , .btn4 , .btn2 , .btn6").addClass("btnTime");
+        } else if (thisBtn == "btn6") {
+            $(".btn1 , .btn3 , .btn4 , .btn5 , .btn2").addClass("btnTime");
+        }
+
+    }
+    var getDate = "";
+    function selectDate(btn) {
+
+        $(btn).addClass("btnDateAct");
+        $(btn).removeClass("btnDate");
+
+        var thisBtn = $(btn).attr("data-t1");
+        getDate = $(btn).text();
+        console.log(getDate);
+
+        if (thisBtn == "btn1") {
+            $(".d2 , .d3").addClass("btnDate");
+        } else if (thisBtn == "btn2") {
+            $(".d1 , .d3").addClass("btnDate");
+        } else if (thisBtn == "btn3") {
+            $(".d1 , .d2").addClass("btnDate");
+        }
+
+    }
+
+    //var objTicket = {}
+
+    function saveTiciket() {
+        let seatArr = [];
+        let qty = 0;
+        $('input[name="seat"]:checked').each(function () {
+            seatArr.push(this.value + " ");
+            qty++;
+        });
+
+        if (qty != 0 && getTime != "" && getDate != "") {
+
+           
+            
+
+            var price =  $(".priceHid").val();
+            var discount = 5;
+
+            $("#dataTicket").css('display', '');
+            $(".seatno").text(seatArr)
+            $(".showtime").text(getTime);
+            $(".showdate").text(getDate);
+
+            $('.btnSaveTicket, input[name="seat"], .btnDis, .btnDis').attr('disabled', 'disabled');
+            $('.btnAddMore').css('display', '');
+
+            //  $(".price").text(price);
+            //  $(".discount").text(discount);
+            var totalPrice = (price * qty) - (price * qty) * (discount / 100);
+            $(".total_price").text(totalPrice);
+
+            var getFirstNm = $.cookie("firstNm");
+            var getLastNm = $.cookie("lastNm");
+            if (getFirstNm != undefined && getLastNm != undefined) {
+                $('.fullNm').text(getFirstNm + " " + getLastNm)
+            }
+
+
+            var addCart = 0;
+
+            console.log("seatArr", seatArr);
+
+            $('.numCart').text(parseInt(addCart) + 1);
+
+            $.ajax('/cookie/cart', {
+                "type": "POST",
+                "data": {
+                    'movie_id': $(".movie_idHid").val(),
+                    'movie_name': $(".movie_name1").text(),
+                    'theater': $(".theater1").text(),
+                    'seatno': JSON.stringify(seatArr),
+                    'getDate': getDate,
+                    'getTime': getTime,
+                    'price': price,
+                    'discount': discount,
+                    'total_price': totalPrice,
+                }
+            }).done(function (data) {
+                console.log(data)
+                payment = true;
+
+            }).fail(function () {
+                console.log("fail");
+            })
+
+
+
+
+        } else {
+            alert("Please Select your information!!!")
+        }
+    }
+    function addTiciket() {
+        $('.btnSaveTicket, input[name="seat"], .btnDis, .btnDis').attr("disabled", false)
+        $('.btnAddMore').css('display', 'none');
+        payment = false;
+
+    }
+
+
+    function loadCategoryData() {
+        $.ajax('/api/categories', {
+            "type": "get",
+        }).done((res) => {
+            categories = res;
+            let u = $("<ul></ul>")
+            for (let category of res) {
+                u.append('<li><a href="/type/'+category.cate_name+'">' + category.cate_name + '</a></li>')
+            }
+            u.append('<li><a href="#">' + "Contact Us" + '</a></li>')
+            $(".nav").append(u);
+        })
+            .fail(() => {
+                console.log("fail");
+            })
+    }
+
+
+</script>
+
+<style>
+    #seatNumber {
+        font-size: 20px;
+
+    }
+
+    #seatNumber th,
+    #seatNumber td {
+        width: 50px;
+        text-align: center;
+    }
+
+    #dataTicket th {
+        width: 130px;
+        height: 30px;
+    }
+
+    .btnTicket {
+        padding: 5px;
+        background-color: pink;
+        border-radius: 7px;
+        width: 150px;
+        font-size: 15px;
+        height: 47px;
+        border: 0px;
+        cursor: pointer;
+    }
+
+    .btnTimeAct {
+        padding: 5px;
+        background-color: #3f6fb6;
+        border-radius: 7px;
+        width: 80px;
+        font-size: 15px;
+        height: 40px;
+        border: 0px;
+        cursor: pointer;
+        color: white;
+    }
+
+    .btnTime {
+        padding: 5px;
+        background-color: white;
+        border-radius: 7px;
+        width: 80px;
+        font-size: 15px;
+        height: 40px;
+        border: 0px;
+        cursor: pointer;
+        color: black;
+    }
+
+    .btnDateAct {
+        padding: 5px;
+        background-color: #3f6fb6;
+        border-radius: 7px;
+        width: 100px;
+        font-size: 15px;
+        height: 40px;
+        border: 0px;
+        cursor: pointer;
+        color: white;
+    }
+
+    .btnDate {
+        padding: 5px;
+        background-color: white;
+        border-radius: 7px;
+        width: 100px;
+        font-size: 15px;
+        height: 40px;
+        border: 0px;
+        cursor: pointer;
+        color: black;
+    }
+
+    .numCart {
+        color: red;
+        position: absolute;
+        right: 25px;
+        top: 15px;
+        font-weight: bold;
+    }
+</style>
+
+<body>
+
+    <div class="container">
+
+        <div class="myHeader">
+            <div class="logo"><a href="/"><img src="/img/logo12.png" width="155px"></a></div>
+            <div class="nav">
+
+            </div>
+            <div class="boxSearch" style="color: white;">
+                <label for=""><a href="/filter/"><img src="/img/search-icon.png" width="20px" /></a></label> &nbsp;&nbsp; <b>|</b> &nbsp;&nbsp;
+                <label for="" id="checkLogIn"></label>&nbsp;&nbsp; <b>|</b> &nbsp;&nbsp;
+                <label for=""><a href="/history/ticket/" id="linkCart"><img src="/img/mvoie_cart.png" width="25px" /><span
+                            class="numCart">0</span></a></label>
+
+
+
+            </div>
+
+        </div>
+
+        <div class="" style="background-color: #2f363b; height: 900px;border: 5px solid white;">
+
+            <div style="padding-top: 100px;width: 100%; margin: 5px; color: white;">
+                <div style="width: 50%;float: left;">
+                    <div style="width: 100%;height: 300px;">
+                        <div style="width: 30%; ;  float: left;" id="coverMovie">
+
+
+                        </div>
+
+                        <div style="width: 70%; float: left;">
+                            <span style="text-align: left;">
+                                <h3>THEATER : <span class="theater theater1"></span></h3>
+                                <h3>RELEASE : <span class="movie_release_date"></span></h3>
+                                <h3>TITLTE : <span class="movie_name movie_name1"></span> </h3>
+                                <h3><label for="">Type : <span class="cate_name"></span> </label>&nbsp;
+                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                    <label for=""> VIEW: <span class="movie_view"></label>
+                                </h3>
+                                <input type="hidden" class="priceHid">
+                                <input type="hidden" class="movie_idHid">
+                                <h3><label for="">PRICE : $ <span class="price"></span> </label>&nbsp;
+                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                    <label for=""> DISCOUNT: <span class="discount"></span>%</label>
+                                </h3>
+                            </span>
+
+                            <label for="">
+                                <Button type="button" onclick="selectTime(this)" data-t1="btn1"
+                                    class="btnDis btn1 btnTime">13:30</Button>
+                                <Button type="button" onclick="selectTime(this)" data-t1="btn2"
+                                    class="btnDis btn2 btnTime">14:30</Button>
+                                <Button type="button" onclick="selectTime(this)" data-t1="btn3"
+                                    class="btnDis btn3 btnTime">15:30</Button>
+                                <Button type="button" onclick="selectTime(this)" data-t1="btn4"
+                                    class="btnDis btn4 btnTime">16:30</Button>
+                                <Button type="button" onclick="selectTime(this)" data-t1="btn5"
+                                    class="btnDis btn5 btnTime">17:30</Button>
+                                <Button type="button" onclick="selectTime(this)" data-t1="btn6"
+                                    class="btnDis btn6 btnTime">18:30</Button>
+                            </label>
+
+                        </div>
+                    </div>
+
+
+
+                    <div style="width: 100%;height: 300px;">
+
+
+
+                        <div style="width: 50%;;  float: left;">
+                            <label for="" id="conBtnDate">
+
+                            </label>
+                            <h1>SCREEN</h1>
+                            <table id="seatNumber">
+                                <thead>
+                                    <tr>
+                                        <th></th>
+                                        <th>1</th>
+                                        <th>2</th>
+                                        <th>3</th>
+                                        <th>4</th>
+                                        <th>5</th>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>A</td>
+                                        <td><input type="checkbox" name="seat" value="A1" /></td>
+                                        <td><input type="checkbox" name="seat" value="A2" /></td>
+                                        <td><input type="checkbox" name="seat" value="A3" /></td>
+                                        <td><input type="checkbox" name="seat" value="A4" /></td>
+                                        <td><input type="checkbox" name="seat" value="A5" /></td>
+                                    </tr>
+                                    <tr>
+                                        <td>B</td>
+                                        <td><input type="checkbox" name="seat" value="B1" /></td>
+                                        <td><input type="checkbox" name="seat" value="B2" /></td>
+                                        <td><input type="checkbox" name="seat" value="B3" /></td>
+                                        <td><input type="checkbox" name="seat" value="B4" /></td>
+                                        <td><input type="checkbox" name="seat" value="B5" /></td>
+
+                                    </tr>
+                                    <tr>
+                                        <td>C</td>
+                                        <td><input type="checkbox" name="seat" value="C1" /></td>
+                                        <td><input type="checkbox" name="seat" value="C2" /></td>
+                                        <td><input type="checkbox" name="seat" value="C3" /></td>
+                                        <td><input type="checkbox" name="seat" value="C4" /></td>
+                                        <td><input type="checkbox" name="seat" value="C5" /></td>
+
+                                    </tr>
+                                    <tr>
+                                        <td>E</td>
+                                        <td><input type="checkbox" name="seat" value="D1" /></td>
+                                        <td><input type="checkbox" name="seat" value="D2" /></td>
+                                        <td><input type="checkbox" name="seat" value="D3" /></td>
+                                        <td><input type="checkbox" name="seat" value="D4" /></td>
+                                        <td><input type="checkbox" name="seat" value="D5" /></td>
+
+                                    </tr>
+                                    <tr>
+                                        <td>F</td>
+                                        <td><input type="checkbox" name="seat" value="F1" /></td>
+                                        <td><input type="checkbox" name="seat" value="F2" /></td>
+                                        <td><input type="checkbox" name="seat" value="F3" /></td>
+                                        <td><input type="checkbox" name="seat" value="F4" /></td>
+                                        <td><input type="checkbox" name="seat" value="F5" /></td>
+
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <Button type="button" onclick="saveTiciket()" class="btnTicket btnSaveTicket">
+                                Save Tickets
+                            </Button>
+                            <Button type="button" onclick="addTiciket()" style="display: none;" id="saveTicket"
+                                class="btnTicket btnAddMore">
+                                AddMore Tickets
+                            </Button>
+
+
+                        </div>
+
+                        <div style="width: 50%;  float: left; display: none;" id="dataTicket">
+
+
+                            <div style="border: 1px solid white;height: 350px;  margin: 13px;">
+                                <div style="padding: 20px;">
+
+                                    <table style="text-align: left !important;">
+                                        <tr>
+                                            <th>MOVIE TITLE </th>
+                                            <td>: <span class="movie_name"></span> </td>
+                                        </tr>
+                                        <tr>
+                                            <th>THEATER </th>
+                                            <td>: <span class="theater"></span></td>
+                                        </tr>
+                                        <tr>
+                                            <th>SEAT NO. </th>
+                                            <td>: <span class="seatno"></span> </td>
+                                        </tr>
+                                        <tr>
+                                            <th>DATE </th>
+                                            <td>: <span class="showdate"></span> </td>
+                                        </tr>
+                                        <tr>
+                                            <th>SHOWTIME </th>
+                                            <td>: <span class="showtime"></span> </td>
+                                        </tr>
+                                        <tr>
+                                            <th>Price </th>
+                                            <td>: $ <span class="price"></span> </td>
+                                        </tr>
+                                        <tr>
+                                            <th>Discount </th>
+                                            <td>: <span class="discount"></span>% </td>
+                                        </tr>
+                                        <tr>
+                                            <th>Total Price </th>
+                                            <td>: $ <span class="total_price"></span> </td>
+                                        </tr>
+                                        <tr>
+                                            <th>User </th>
+                                            <td>: <span class="fullNm"></span> </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div style="margin-top: 5px;">
+                                    <input type="text" style="width: 190px;" id="remark" placeholder="Bank Account">
+                                </div>
+                                <span style="text-align: center;">
+
+                                    <Button
+                                        style="padding: 5px; background-color: pink; border-radius: 7px;  width: 200px;  font-size: 19px;  height: 35px;"
+                                        id="btnPayment">
+                                        Payment</Button></span>
+                            </div>
+
+                        </div>
+                    </div>
+
+
+
+                </div>
+                <div style="width: 50%;float: left;height: 500px;">
+                    <div id="movie_links">
+
+                    </div>
+
+                    <h3>Description:
+                        <p class="movie_desc">
+
+                        </p>
+                    </h3>
+
+                </div>
+            </div>
+
+
+
+
+
+        </div>
+
+        <div class="footer">
+
+            <div class="flex-container">
+                <div class="flex-item-left">
+                    <h4>About Us</h4>
+                    <p style="text-align: justify;">We are an online database of
+                        information related to films, television series, podcasts,
+                        home videos, video games, and streaming content online –
+                        including cast, production crew and personal biographies,
+                        plot summaries, trivia, ratings, and fan and critical reviews.
+                    <h5>Tel: +123456789</h5>
+                    <h5>Email: info@moviesite.com</h5>
+
+                    <div>
+                        <span class="boxEmail"> Enter your Email</span>
+                        <span class="boxEmail" style="background-color: rgb(241 150 1);color: white;"> Send</span>
+                    </div>
+
+                </div>
+                <div class="flex-item-center">
+                    <h4>Developed By</h4>
+                    <ul>
+                        <li>Name: <strong>Phearun Phin</strong></li>
+                        <li>Name: <strong>Kevin Chemutai</strong></li>
+                        <li>Name: <strong>Meseret Yihun Amare</strong></li>
+                        <li>Name: <strong>Teketsel Mengistu Beyene</strong></li>
+
+                    </ul>
+
+                    <h4>Latest Tweet</h4>
+                    <ol>
+                        <li>Prepare for eye-popping, jaw-dropping, non-stopping fun! ⚡️
+                            SHAZAM! FURY OF THE GODS – now playing only in theaters. Get tickets now</li>
+                        <li>Actors - What one word would you say describes your character?
+                            Writer(s) - What's your inspiration for these movies?</li>
+                        <li>What are some of the things you and your character have in common? #MovieNight</li>
+                    </ol>
+
+
+                </div>
+                <div class="flex-item-right">
+                    <h4>Top Movies</h4>
+
+                    <div class="grid-movies">
+
+                        <div class="movies1"><img src="/img/m12.jpg" /></div>
+                        <div class="movies2"><img src="/img/m5.jpg" /></div>
+                        <div class="movies3"><img src="/img/m7.jpg" /></div>
+                        <div class="movies4"><img src="/img/m13.jpg" /></div>
+
+                    </div>
+                </div>
+
+
+            </div>
+
+            <hr />
+            <div>
+                <div class="nav">
+                </div>
+                <div class="boxSearch">
+                    <img src="img/logo12.png" width="100px" />
+                </div>
+            </div>
+
+        </div>
+
+
+    </div>
+</body>
+
+</html>
